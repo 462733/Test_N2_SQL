@@ -1,0 +1,35 @@
+create table `kolbasa` (
+  `id_stuff` int,
+  `begin_vac` date not null,
+  `end_vac` date not null,
+  UNIQUE(id_stuff,begin_vac,end_vac));
+  
+  insert into kolbasa (id_stuff, begin_vac, end_vac)
+  values 
+  (0, '2023-03-30', '2023-03-31'),
+  (1, '2023-03-30', '2023-04-06'),
+  (2, '2023-03-28', '2023-04-03'),
+  (2, '2023-04-06', '2023-04-06'),
+  (3, '2023-03-22', '2023-03-26'),
+  (4, '2023-03-16', '2023-03-22'),
+  (5, '2023-03-13', '2023-03-16'),
+  (6, '2023-03-14', '2023-04-25');
+
+
+SET @_max_simul_vac=2;
+select DATE_FORMAT(_date,'%d/%m'), _id from (
+  select k1.begin_vac as _date, group_concat(DISTINCT k2.id_stuff ORDER BY k2.id_stuff) as _id
+from kolbasa as k1
+join kolbasa as k2 on
+(k1.begin_vac>=k2.begin_vac and k1.begin_vac<=k2.end_vac)
+group by k1.begin_vac
+HAVING COUNT(k1.begin_vac)>@_max_simul_vac
+UNION
+select DATE_ADD(k1.end_vac, INTERVAL 1 DAY) as _date, group_concat(DISTINCT k2.id_stuff ORDER BY k2.id_stuff) as _id
+from kolbasa as k1
+join kolbasa as k2 on
+DATE_ADD(k1.end_vac, INTERVAL 1 DAY) >= k2.begin_vac and DATE_ADD(k1.end_vac, INTERVAL 1 DAY) <= k2.end_vac
+group by _date
+HAVING COUNT(_date)>@_max_simul_vac
+) _kolbasa
+order by _date
